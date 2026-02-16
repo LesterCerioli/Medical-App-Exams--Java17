@@ -98,3 +98,6 @@ If you manually switch to a different parent and actually want the inheritance, 
 ``bash
 java -jar target/exams-0.0.1-SNAPSHOT.jar --server.port=9999
 ``bash
+
+- Base url: http://localhost:9999/swagger-ui.html
+- swagger: http://localhost:9999/swagger-ui/index.html
