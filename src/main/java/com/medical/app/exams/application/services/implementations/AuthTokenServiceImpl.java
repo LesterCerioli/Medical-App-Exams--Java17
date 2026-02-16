@@ -1,8 +1,18 @@
 package com.medical.app.exams.application.services.implementations;
 
-import com.medical.app.exams.application.services.contracts.AuthTokenServiceContract;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import javax.crypto.SecretKey;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,11 +20,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.*;
-import javax.crypto.SecretKey;
+import com.medical.app.exams.application.services.contracts.AuthTokenServiceContract;
+
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 @Service
 public class AuthTokenServiceImpl implements AuthTokenServiceContract {
@@ -55,8 +67,10 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
             throw new IllegalArgumentException("invalid client_id or secret");
         }
 
-        LocalDateTime expiresAt = LocalDateTime.now(ZoneId.of("UTC")).plusMinutes(2);
-        Date expirationDate = Date.from(expiresAt.atZone(ZoneId.systemDefault()).toInstant());
+        // Exatamente como no Python: usa UTC para o timestamp de expiração
+        Instant now = Instant.now();
+        Instant expiresAtInstant = now.plusSeconds(120); // 2 minutos
+        Date expirationDate = Date.from(expiresAtInstant);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("client_id", clientId);
@@ -78,17 +92,18 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
         }
 
         String sql = "INSERT INTO public.auth_tokens (id, client_id, jwt_token, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)";
-        UUID id = UUID.randomUUID();
-        LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+        String id = UUID.randomUUID().toString(); // Exatamente como no Python: string
+        Timestamp expiresAtTs = Timestamp.from(expiresAtInstant);
+        Timestamp nowTs = Timestamp.from(now);
 
         try {
             int rows = jdbcTemplate.update(sql,
-                    id.toString(),
+                    id,
                     clientId,
                     tokenString,
-                    expiresAt,
-                    now,
-                    now
+                    expiresAtTs,
+                    nowTs,
+                    nowTs
             );
             if (rows != 1) {
                 throw new RuntimeException("Failed to insert token into database");
@@ -102,7 +117,8 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
             throw new IllegalArgumentException("unexpected error to save on database: " + e.getMessage());
         }
 
-        return new TokenResponse(tokenString, clientId, expiresAt);
+        // Retorna o token com expiresAt no formato ISO (usando LocalDateTime, que será convertido)
+        return new TokenResponse(tokenString, clientId, expiresAtInstant.atZone(ZoneOffset.UTC).toLocalDateTime());
     }
 
     @Override
@@ -114,9 +130,9 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
                 return false;
             }
             Jwts.parser()
-                    .verifyWith(signingKey) 
+                    .verifyWith(signingKey)
                     .build()
-                    .parseClaimsJws(token.toString());
+                    .parseClaimsJws(token);
             return true;
         } catch (ExpiredJwtException e) {
             logger.warn("Token expired: {}", e.getMessage());
