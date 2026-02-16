@@ -1,8 +1,10 @@
-package com.medical.app.exams.domain.entities;
+package com.medical.app.exams.domain.contracts;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import com.medical.app.exams.domain.entities.ReferenceRange;
 
 public interface ReferenceRangeRepositoryContract {
     ReferenceRange save(ReferenceRange referenceRange);
