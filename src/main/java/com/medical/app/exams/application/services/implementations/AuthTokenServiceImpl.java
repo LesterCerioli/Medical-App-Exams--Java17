@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -67,7 +66,7 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
             throw new IllegalArgumentException("invalid client_id or secret");
         }
 
-        // Exatamente como no Python: usa UTC para o timestamp de expiração
+        
         Instant now = Instant.now();
         Instant expiresAtInstant = now.plusSeconds(120); // 2 minutos
         Date expirationDate = Date.from(expiresAtInstant);
@@ -86,19 +85,18 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
                     .signWith(signingKey)
                     .compact();
             logger.info("JWT token successfully generated for client_id={}", clientId);
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException e) {
             logger.error("Failed to sign JWT token: {}", e.getMessage());
             throw new IllegalArgumentException("error generating token: " + e.getMessage());
         }
 
-        String sql = "INSERT INTO public.auth_tokens (id, client_id, jwt_token, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)";
-        String id = UUID.randomUUID().toString(); // Exatamente como no Python: string
+        
+        String sql = "INSERT INTO public.auth_tokens (client_id, jwt_token, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?)";
         Timestamp expiresAtTs = Timestamp.from(expiresAtInstant);
         Timestamp nowTs = Timestamp.from(now);
 
         try {
             int rows = jdbcTemplate.update(sql,
-                    id,
                     clientId,
                     tokenString,
                     expiresAtTs,
@@ -132,7 +130,7 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
             Jwts.parser()
                     .verifyWith(signingKey)
                     .build()
-                    .parseClaimsJws(token);
+                    .parseSignedClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
             logger.warn("Token expired: {}", e.getMessage());
@@ -140,7 +138,7 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
         } catch (JwtException | IllegalArgumentException e) {
             logger.warn("Invalid token: {}", e.getMessage());
             return false;
-        } catch (Exception e) {
+        } catch (org.springframework.dao.DataAccessException e) {
             logger.error("Error validating token: {}", e.getMessage());
             return false;
         }
@@ -152,7 +150,7 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
             String sql = "SELECT jwt_token FROM public.auth_tokens WHERE client_id = ? AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1";
             List<String> tokens = jdbcTemplate.query(sql, (rs, rowNum) -> rs.getString("jwt_token"), clientId);
             return tokens.isEmpty() ? Optional.empty() : Optional.of(tokens.get(0));
-        } catch (Exception e) {
+        } catch (org.springframework.dao.DataAccessException e) {
             logger.error("Error while fetching valid token: {}", e.getMessage());
             return Optional.empty();
         }
@@ -168,7 +166,7 @@ public class AuthTokenServiceImpl implements AuthTokenServiceContract {
                 logger.info("Expired tokens cleanup: {} tokens removed", deleted);
             }
             return deleted;
-        } catch (Exception e) {
+        } catch (org.springframework.dao.DataAccessException e) {
             logger.error("Error cleaning up expired tokens: {}", e.getMessage());
             return 0;
         }
