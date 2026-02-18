@@ -101,3 +101,6 @@ java -jar target/exams-0.0.1-SNAPSHOT.jar --server.port=9999
 
 - Base url: http://localhost:9999/swagger-ui.html
 - swagger: http://localhost:9999/swagger-ui/index.html
+
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/a438b7ff-a135-4e5b-8bb8-6db32670e589" />
+
