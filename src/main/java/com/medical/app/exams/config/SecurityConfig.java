@@ -18,18 +18,20 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
-                    "/swagger-ui.html",
-                    "/webjars/**",
-                    "/swagger-resources/**"
+                    "/swagger-ui.html"
                 ).permitAll()
                 
-                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/auth/token", "/auth/validate").permitAll()
                 
                 .anyRequest().authenticated()
             )
-            .formLogin(form -> form.permitAll())
-            .httpBasic(basic -> {})
-            .csrf(csrf -> csrf.disable()); 
+            
+            .csrf(csrf -> csrf.disable())
+            
+            .formLogin(formLogin -> formLogin.disable())
+            
+            .httpBasic(httpBasic -> httpBasic.disable());
+
         return http.build();
     }
 }
