@@ -2,26 +2,13 @@ package com.medical.app.exams.application.services.schemas.authtokens;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import jakarta.validation.constraints.NotBlank;
-
-public class AuthTokenRequest {
-    @NotBlank
-    @JsonProperty("client_id")
-    private String clientId;
-
-    @NotBlank
-    @JsonProperty("client_secret")
-    private String clientSecret;
+public record AuthTokenResponse(
+    @JsonProperty("access_token") String accessToken,
+    @JsonProperty("token_type") String tokenType,
+    @JsonProperty("expires_in") Long expiresIn
+) {
     
-    public AuthTokenRequest() {}
-
-    public AuthTokenRequest(String clientId, String clientSecret) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
+    public AuthTokenResponse {
+        if (tokenType == null) tokenType = "Bearer";
     }
-
-    public String getClientId() { return clientId; }
-    public void setClientId(String clientId) { this.clientId = clientId; }
-    public String getClientSecret() { return clientSecret; }
-    public void setClientSecret(String clientSecret) { this.clientSecret = clientSecret; }
 }

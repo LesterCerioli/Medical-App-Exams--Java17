@@ -24,7 +24,6 @@ import com.medical.app.exams.application.services.contracts.AuthTokenServiceCont
 import com.medical.app.exams.application.services.schemas.authtokens.AuthTokenRequest;
 import com.medical.app.exams.application.services.schemas.authtokens.TokenValidationResponse;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -93,14 +92,12 @@ public class AuthTokenController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token");
         }
         
-        String clientId;
         try {
-            Claims claims = Jwts.parser()
+            Jwts.parser()
                     .verifyWith(signingKey)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-            clientId = claims.get("client_id", String.class);
         } catch (JwtException e) {
             logger.warn("Failed to decode token after DB validation: {}", e.getMessage());
             
