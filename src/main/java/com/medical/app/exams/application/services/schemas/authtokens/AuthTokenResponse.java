@@ -7,7 +7,6 @@ public record AuthTokenResponse(
     @JsonProperty("token_type") String tokenType,
     @JsonProperty("expires_in") Long expiresIn
 ) {
-    
     public AuthTokenResponse {
         if (tokenType == null) tokenType = "Bearer";
     }
